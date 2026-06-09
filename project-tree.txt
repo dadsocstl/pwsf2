@@ -1,1 +1,15 @@
-Current project directory tree
+Project tree (top-level):
+
+- baselines/
+- cyberforge-paas/
+- docs/
+- infrastructure/
+- oscal-compliance/
+- overlays/
+- pipelines/
+- platform-services/
+- references/
+- scripts/
+- software-requests/
+- supply-chain/
+- tenancy/
