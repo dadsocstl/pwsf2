@@ -1,1 +1,82 @@
-Kubernetes STIG policies
+apiVersion: v1
+kind: List
+items:
+  # Kubernetes STIG: Pod Security Standards — restricted
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: cyberforge-workloads
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/audit: restricted
+        pod-security.kubernetes.io/warn: restricted
+      annotations:
+        stig.disa.mil/finding: "V-242414"
+        stig.disa.mil/severity: "CAT I"
+        description: "Kubernetes must enforce a restricted Pod Security Standard."
+
+  # Kubernetes STIG: Restrict hostPath mounts
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sPSPHostFilesystem
+    metadata:
+      name: kubernetes-stig-no-hostpath
+      annotations:
+        stig.disa.mil/finding: "V-242424"
+        stig.disa.mil/severity: "CAT II"
+        description: "Pods must not mount sensitive host paths."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        allowedHostPaths:
+          - pathPrefix: "/dev/null"
+            readOnly: true
+
+  # Kubernetes STIG: Restrict host networking / ports
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sPSPHostNetworkingPorts
+    metadata:
+      name: kubernetes-stig-no-host-network
+      annotations:
+        stig.disa.mil/finding: "V-242425"
+        stig.disa.mil/severity: "CAT II"
+        description: "Pods must not use host networking."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        hostNetwork: false
+        hostPorts:
+          - min: 0
+            max: 0
+
+  # Kubernetes STIG: Require resource limits
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sContainerLimits
+    metadata:
+      name: kubernetes-stig-resource-limits
+      annotations:
+        stig.disa.mil/finding: "V-242447"
+        stig.disa.mil/severity: "CAT II"
+        description: "All containers must have CPU and memory limits set."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        cpu: "2000m"
+        memory: "2Gi"

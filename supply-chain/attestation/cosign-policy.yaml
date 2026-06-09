@@ -1,1 +1,54 @@
-Cosign attestation policy
+apiVersion: v1
+kind: CosignPolicy
+metadata:
+  name: cyberforge-attestation-policy
+  description: "Cosign attestation verification policy for CyberForge platform images"
+
+# Policy: all images must be signed and have a valid SBOM attestation
+policy:
+  signatureVerification:
+    enabled: true
+    keyRef: /etc/cosign/cosign-pub.key
+    identityRef: ""  # leave empty for key-based verification
+
+  attestationVerification:
+    enabled: true
+    predicates:
+      - type: https://spdx.dev/Document      # SBOM (SPDX)
+        required: true
+      - type: https://slsa.dev/provenance/v0.2  # SLSA provenance
+        required: false
+      - type: https://cosign.sigstore.dev/attestation/vuln/v1  # Vuln scan
+        required: false
+
+  imageRules:
+    # All production images must be signed
+    - pattern: "registry.example.mil/cyberforge/*"
+      signatureRequired: true
+      attestationsRequired:
+        - https://spdx.dev/Document
+      minimumSlsaLevel: 2
+
+    # IronBank images: trust the IronBank signature
+    - pattern: "ironbank.dso.mil/*"
+      signatureRequired: true
+      trustedKeys:
+        - /etc/cosign/ironbank-pub.key
+
+    # Internal mirror of IronBank images
+    - pattern: "registry.example.mil/ironbank-mirror/*"
+      signatureRequired: true
+      trustedKeys:
+        - /etc/cosign/cosign-pub.key
+        - /etc/cosign/ironbank-pub.key
+
+  # Transparency log — disabled for air-gapped environments
+  transparencyLog:
+    enabled: false
+    rekorURL: ""
+
+  # Certificate identity verification (for keyless signing, if used in future)
+  certificateIdentity:
+    enabled: false
+    oidcIssuer: ""
+    subjectRegexp: ""

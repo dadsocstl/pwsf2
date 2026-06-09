@@ -1,1 +1,92 @@
-Sample SSP control implementation
+{
+  "uuid": "a9b0c1d2-e3f4-5678-9abc-def012345678",
+  "control-implementation": {
+    "description": "CyberForge Platform NIST 800-53 Rev 5 control implementation.",
+    "implemented-requirements": [
+      {
+        "uuid": "b0c1d2e3-f4a5-6789-abcd-ef0123456789",
+        "control-id": "ac-2",
+        "description": "Kubernetes RBAC with OIDC integration provides account management.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "c1d2e3f4-a5b6-7890-bcde-f01234567890",
+            "description": "Role-based access control is defined in tenancy/rbac/kubernetes/rbac.yaml."
+          }
+        ]
+      },
+      {
+        "uuid": "d2e3f4a5-b6c7-8901-cdef-012345678901",
+        "control-id": "ac-17",
+        "description": "Remote access is restricted to approved jump servers with MFA.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "e3f4a5b6-c7d8-9012-defa-123456789012",
+            "description": "Network policies enforced by Cilium prevent unauthorized remote access paths."
+          }
+        ]
+      },
+      {
+        "uuid": "f4a5b6c7-d8e9-0123-efab-234567890123",
+        "control-id": "au-2",
+        "description": "All Kubernetes API server audit events are forwarded to ELK stack SIEM.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "a5b6c7d8-e9f0-1234-fabc-345678901234",
+            "description": "Filebeat DaemonSet collects and forwards logs. Retention configured in ELK values."
+          }
+        ]
+      },
+      {
+        "uuid": "b6c7d8e9-f0a1-2345-abcd-456789012345",
+        "control-id": "au-9",
+        "description": "Audit logs stored in MinIO with object-lock enabled to prevent tampering.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "c7d8e9f0-a1b2-3456-bcde-567890123456",
+            "description": "MinIO bucket 'cyberforge-backups' has objectlocking=true per minio-values.yaml."
+          }
+        ]
+      },
+      {
+        "uuid": "d8e9f0a1-b2c3-4567-cdef-678901234567",
+        "control-id": "cm-6",
+        "description": "STIG hardening applied via Ansible playbook and enforced by Kyverno policies.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "e9f0a1b2-c3d4-5678-defa-789012345678",
+            "description": "baselines/os-stig/ansible-playbooks/hardening.yml applied during node provisioning."
+          }
+        ]
+      },
+      {
+        "uuid": "f0a1b2c3-d4e5-6789-efab-890123456789",
+        "control-id": "ia-5",
+        "description": "HashiCorp Vault manages dynamic secrets with automatic rotation and TTL enforcement.",
+        "by-components": [
+          {
+            "component-uuid": "f2a3b4c5-d6e7-8901-fabc-012345678901",
+            "uuid": "a1b2c3d4-e5f6-7890-fabc-901234567890",
+            "description": "Vault configured in HA mode per vault-values.yaml with AWS KMS auto-unseal."
+          }
+        ]
+      },
+      {
+        "uuid": "b2c3d4e5-f6a7-8901-abcd-012345678901",
+        "control-id": "sr-11",
+        "description": "All container images signed with Cosign and validated at admission by Kyverno.",
+        "by-components": [
+          {
+            "component-uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "uuid": "c3d4e5f6-a7b8-9012-bcde-123456789012",
+            "description": "Kyverno ClusterPolicy 'require-signed-images' enforced in all non-exempt namespaces."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,1 +1,71 @@
-IronBank mirror config
+# baselines/ironbank-mirror/mirror-config.yaml
+# Configuration for mirroring IronBank (DoD Iron Bank) container images
+# to an internal Harbor/ECR registry in air-gapped environments.
+
+apiVersion: v1
+kind: MirrorConfig
+metadata:
+  name: ironbank-mirror
+  description: "DoD Iron Bank image mirror configuration for CyberForge"
+
+source:
+  registry: ironbank.dso.mil
+  # Authentication via credentials stored in Vault or k8s secret
+  credentialSecret: ironbank-registry-credentials
+
+destination:
+  registry: registry.example.mil
+  project: ironbank-mirror
+  credentialSecret: internal-registry-credentials
+
+# Images to mirror — add entries as needed
+images:
+  - source: ironbank/redhat/ubi/ubi9-minimal:latest
+    destination: ironbank-mirror/ubi9-minimal:latest
+    pinToDigest: true
+
+  - source: ironbank/opensource/falcosecurity/falco:0.38.1
+    destination: ironbank-mirror/falco:0.38.1
+    pinToDigest: true
+
+  - source: ironbank/hashicorp/vault:1.16.1
+    destination: ironbank-mirror/vault:1.16.1
+    pinToDigest: true
+
+  - source: ironbank/opensource/argoproj/argocd:v2.10.4
+    destination: ironbank-mirror/argocd:v2.10.4
+    pinToDigest: true
+
+  - source: ironbank/opensource/elastic/elasticsearch/elasticsearch:8.13.0
+    destination: ironbank-mirror/elasticsearch:8.13.0
+    pinToDigest: true
+
+  - source: ironbank/opensource/elastic/kibana/kibana:8.13.0
+    destination: ironbank-mirror/kibana:8.13.0
+    pinToDigest: true
+
+  - source: ironbank/opensource/prometheus/prometheus:v2.51.0
+    destination: ironbank-mirror/prometheus:v2.51.0
+    pinToDigest: true
+
+  - source: ironbank/opensource/grafana/grafana:10.4.1
+    destination: ironbank-mirror/grafana:10.4.1
+    pinToDigest: true
+
+  - source: ironbank/opensource/minio/minio:RELEASE.2024-03-26T22-10-45Z
+    destination: ironbank-mirror/minio:RELEASE.2024-03-26
+    pinToDigest: true
+
+# Mirror execution settings
+settings:
+  concurrency: 4
+  retries: 3
+  retryDelay: 10s
+  verifySignatures: true
+  cosignPublicKey: /etc/mirror/cosign-pub.key
+  signOnMirror: true
+  cosignSigningKey: /etc/mirror/cosign-signing.key
+
+# Lifecycle policy: keep last N mirrored tags per image
+lifecycle:
+  keepLastN: 5

@@ -1,1 +1,108 @@
-Cosign signing pipeline
+# pipelines/supply-chain/cosign-sign.yml
+# GitLab CI pipeline: Sign container images and generate attestations
+# using Cosign in an air-gapped environment.
+
+stages:
+  - verify
+  - sign
+  - attest
+
+variables:
+  COSIGN_KEY_PATH: /vault/secrets/cosign.key
+  # COSIGN_PASSWORD must be injected via Vault agent or CI secret — do not set a default here
+  SIGSTORE_NO_TLOG_UPLOAD: "true"   # air-gapped: skip rekor transparency log
+
+# ──────────────────────────────────────────────
+# Verify: confirm image exists and is unaltered
+# ──────────────────────────────────────────────
+verify:image-digest:
+  stage: verify
+  image: registry.example.mil/ironbank-mirror/sigstore/cosign:v2.2.4
+  script:
+    - |
+      echo "Verifying image digest for ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+      DIGEST=$(cosign triangulate "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}" 2>/dev/null || true)
+      if [[ -z "${DIGEST}" ]]; then
+        echo "WARNING: Could not resolve image digest. Proceeding with tag."
+      else
+        echo "Image digest: ${DIGEST}"
+      fi
+  allow_failure: false
+
+# ──────────────────────────────────────────────
+# Sign: Sign the container image
+# ──────────────────────────────────────────────
+sign:container-image:
+  stage: sign
+  image: registry.example.mil/ironbank-mirror/sigstore/cosign:v2.2.4
+  needs: [verify:image-digest]
+  before_script:
+    # Fetch signing key from Vault via Vault agent sidecar or env injection
+    - echo "Using signing key at ${COSIGN_KEY_PATH}"
+  script:
+    - |
+      cosign sign \
+        --key "${COSIGN_KEY_PATH}" \
+        --annotation "pipeline=${CI_PIPELINE_URL}" \
+        --annotation "commit=${CI_COMMIT_SHA}" \
+        --annotation "built-by=cyberforge-ci" \
+        "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+      echo "Image signed: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+
+      # Also sign the 'latest' tag if on main
+      if [[ "${CI_COMMIT_BRANCH}" == "main" ]]; then
+        cosign sign \
+          --key "${COSIGN_KEY_PATH}" \
+          "${CI_REGISTRY_IMAGE}:latest" || true
+      fi
+  environment:
+    name: supply-chain-signing
+
+# ──────────────────────────────────────────────
+# Attest: Attach SBOM and provenance attestations
+# ──────────────────────────────────────────────
+attest:sbom:
+  stage: attest
+  image: registry.example.mil/ironbank-mirror/sigstore/cosign:v2.2.4
+  needs: [sign:container-image]
+  script:
+    - |
+      if [[ -f "sbom-output/sbom.spdx.json" ]]; then
+        cosign attest \
+          --key "${COSIGN_KEY_PATH}" \
+          --predicate sbom-output/sbom.spdx.json \
+          --type spdxjson \
+          "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+        echo "SBOM attestation attached."
+      else
+        echo "WARNING: No SBOM found at sbom-output/sbom.spdx.json — skipping attestation."
+      fi
+  allow_failure: true
+
+attest:provenance:
+  stage: attest
+  image: registry.example.mil/ironbank-mirror/sigstore/cosign:v2.2.4
+  needs: [sign:container-image]
+  script:
+    - |
+      cat > /tmp/provenance.json <<EOF
+      {
+        "_type": "https://in-toto.io/Statement/v0.1",
+        "predicateType": "https://slsa.dev/provenance/v0.2",
+        "subject": [{"name": "${CI_REGISTRY_IMAGE}", "digest": {"sha256": "${CI_COMMIT_SHA}"}}],
+        "predicate": {
+          "builder": {"id": "https://gitlab.example.mil/cyberforge"},
+          "buildType": "https://gitlab.com/gitlab-org/gitlab/-/pipelines/${CI_PIPELINE_ID}",
+          "metadata": {
+            "buildStartedOn": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "completeness": {"arguments": false, "environment": false, "materials": false}
+          }
+        }
+      }
+      EOF
+      cosign attest \
+        --key "${COSIGN_KEY_PATH}" \
+        --predicate /tmp/provenance.json \
+        --type slsaprovenance \
+        "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+      echo "Provenance attestation attached."

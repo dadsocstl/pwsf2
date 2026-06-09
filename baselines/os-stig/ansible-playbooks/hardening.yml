@@ -1,1 +1,173 @@
-OS STIG hardening playbook
+---
+# baselines/os-stig/ansible-playbooks/hardening.yml
+# Ansible playbook: RHEL 9 STIG hardening baseline.
+# Applies key DISA STIG controls for CyberForge operating system nodes.
+
+- name: RHEL 9 STIG Hardening
+  hosts: all
+  become: true
+  vars:
+    stig_banner: |
+      You are accessing a U.S. Government (USG) Information System (IS).
+      Unauthorized use is prohibited and subject to civil and criminal penalties.
+    ssh_max_auth_tries: 3
+    ssh_client_alive_interval: 300
+    ssh_client_alive_count_max: 0
+    password_min_length: 15
+    password_max_days: 60
+    password_min_days: 1
+    audit_log_max_size: 8192
+    grub_password_hash: "grub.pbkdf2.sha512.CHANGEME"
+
+  tasks:
+    # ------------------------------------------------------------------ #
+    # CAT I: Critical findings
+    # ------------------------------------------------------------------ #
+    - name: "V-257777 | CAT I | Disable root login via SSH"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+        backup: true
+      notify: restart sshd
+
+    - name: "V-257778 | CAT I | Disable empty passwords via SSH"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        state: present
+      notify: restart sshd
+
+    - name: "V-257779 | CAT I | Set SSH MaxAuthTries"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: "MaxAuthTries {{ ssh_max_auth_tries }}"
+        state: present
+      notify: restart sshd
+
+    - name: "V-257780 | CAT I | Disable SSH Protocol 1"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Protocol'
+        line: 'Protocol 2'
+        state: present
+      notify: restart sshd
+
+    # ------------------------------------------------------------------ #
+    # CAT II: Medium findings
+    # ------------------------------------------------------------------ #
+    - name: "V-257781 | CAT II | Set SSH ClientAliveInterval"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?ClientAliveInterval'
+        line: "ClientAliveInterval {{ ssh_client_alive_interval }}"
+        state: present
+      notify: restart sshd
+
+    - name: "V-257782 | CAT II | Set SSH ClientAliveCountMax"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?ClientAliveCountMax'
+        line: "ClientAliveCountMax {{ ssh_client_alive_count_max }}"
+        state: present
+      notify: restart sshd
+
+    - name: "V-257783 | CAT II | Set GRUB2 login banner"
+      copy:
+        content: "{{ stig_banner }}"
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "V-257784 | CAT II | Configure password minimum length"
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: '^#?minlen'
+        line: "minlen = {{ password_min_length }}"
+        state: present
+
+    - name: "V-257785 | CAT II | Set password maximum age"
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: "PASS_MAX_DAYS {{ password_max_days }}"
+        state: present
+
+    - name: "V-257786 | CAT II | Set password minimum age"
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MIN_DAYS'
+        line: "PASS_MIN_DAYS {{ password_min_days }}"
+        state: present
+
+    - name: "V-257787 | CAT II | Configure auditd log size"
+      lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^max_log_file\s*='
+        line: "max_log_file = {{ audit_log_max_size }}"
+        state: present
+      notify: restart auditd
+
+    - name: "V-257788 | CAT II | Enable and start auditd"
+      systemd:
+        name: auditd
+        enabled: true
+        state: started
+
+    - name: "V-257789 | CAT II | Disable Ctrl-Alt-Del reboot"
+      systemd:
+        name: ctrl-alt-del.target
+        masked: true
+
+    - name: "V-257790 | CAT II | Disable USB storage kernel module"
+      kernel_blacklist:
+        name: usb-storage
+        state: present
+
+    - name: "V-257791 | CAT II | Set core dump hard limit to 0"
+      pam_limits:
+        domain: "*"
+        limit_type: hard
+        limit_item: core
+        value: "0"
+
+    - name: "V-257792 | CAT II | Remove unneeded services: telnet"
+      package:
+        name: telnet
+        state: absent
+
+    - name: "V-257793 | CAT II | Remove unneeded services: rsh-server"
+      package:
+        name: rsh-server
+        state: absent
+
+    - name: "V-257794 | CAT II | Ensure FIPS mode is enabled"
+      command: fips-mode-setup --enable
+      register: fips_result
+      changed_when: fips_result.rc == 0
+      failed_when: false
+
+    - name: "V-257794 | Verify FIPS mode is active"
+      shell: cat /proc/sys/crypto/fips_enabled
+      register: fips_status
+      changed_when: false
+      failed_when: fips_status.stdout | trim != "1"
+      ignore_errors: true
+
+  # ------------------------------------------------------------------ #
+  # Handlers
+  # ------------------------------------------------------------------ #
+  handlers:
+    - name: restart sshd
+      systemd:
+        name: sshd
+        state: restarted
+
+    - name: restart auditd
+      systemd:
+        name: auditd
+        state: restarted

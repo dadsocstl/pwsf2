@@ -1,1 +1,86 @@
-Windows 11 M-L-L overlay definition - full
+# overlays/windows11/mll-overlay.yaml
+# Windows 11 Multi-Level Lab (MLL) STIG overlay definition.
+# Applies DoD JSIG-required tailoring for Windows 11 workstations
+# in a classified lab environment.
+
+overlay:
+  id: windows11-mll-overlay
+  title: "Windows 11 MLL STIG Overlay"
+  version: "1.0.0"
+  profile: "Windows_11_STIG_V1R6"
+  classification: "UNCLASSIFIED//FOR OFFICIAL USE ONLY"
+  last-modified: "2024-01-15"
+  environment: "Multi-Level Lab (MLL)"
+
+controls:
+  # ── Not Applicable in MLL environment ──────────────────────────
+  - id: WN11-00-000030
+    status: not-applicable
+    justification: >
+      MLL systems do not connect to the public internet. Internet browser
+      requirements are not applicable in this environment.
+
+  - id: WN11-00-000035
+    status: not-applicable
+    justification: >
+      External media ports are physically disabled by hardware controls.
+      Software-level USB restriction is redundant and not applicable.
+
+  # ── Inherited from infrastructure ──────────────────────────────
+  - id: WN11-AC-000005
+    status: inherited
+    origin: cyberforge-active-directory
+    description: >
+      Account lockout policy is enforced by the Active Directory Group Policy
+      Object applied to all MLL workstations.
+
+  - id: WN11-AC-000010
+    status: inherited
+    origin: cyberforge-active-directory
+    description: >
+      Password complexity and minimum length are enforced by Active Directory
+      fine-grained password policy.
+
+  # ── Organization-defined values ────────────────────────────────
+  - id: WN11-AC-000020
+    status: applicable
+    org-defined-value:
+      name: "session-lock-minutes"
+      value: "10"
+    description: >
+      Screen saver activation set to 10 minutes for MLL systems.
+
+  - id: WN11-AU-000500
+    status: applicable
+    org-defined-value:
+      name: "audit-log-size-kb"
+      value: "1024000"
+    description: >
+      Application event log size set to 1 GB to support MLL operational tempo.
+
+  # ── Applicable — no changes ─────────────────────────────────────
+  - id: WN11-CC-000326
+    status: applicable
+    description: >
+      Windows Defender Credential Guard must be enabled. No tailoring required.
+
+  - id: WN11-CC-000515
+    status: applicable
+    description: >
+      Windows 11 systems must use a FIPS-validated cipher. No tailoring required.
+
+# Validation checks applied at imaging time
+validation:
+  checks:
+    - id: fips-mode
+      description: "Verify FIPS mode is enabled"
+      command: "reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\FipsAlgorithmPolicy /v Enabled"
+      expected: "0x1"
+    - id: bitlocker
+      description: "Verify BitLocker is active on system drive"
+      command: "manage-bde -status C:"
+      expected: "Protection On"
+    - id: defender-av
+      description: "Verify Windows Defender AV is running"
+      command: "Get-MpComputerStatus | Select-Object AMRunningMode"
+      expected: "Normal"

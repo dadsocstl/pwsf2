@@ -1,1 +1,102 @@
-JSIG INT-B overlay profile
+# oscal-compliance/trestle-workspace/profiles/jsig-sap-overlay.yaml
+# JSIG INT-B SAP Overlay profile for the CyberForge platform.
+# This overlay applies DoD JSIG-required tailoring on top of NIST 800-53 Rev 5.
+
+profile:
+  uuid: 8a5d4a2c-1b3e-4f7d-9c2a-0e5f8b6d3a1c
+  metadata:
+    title: "CyberForge JSIG SAP Overlay"
+    last-modified: "2024-01-15T00:00:00Z"
+    version: "1.0.0"
+    oscal-version: "1.0.4"
+    parties:
+      - uuid: 9e3c7b1a-5d4f-4e2a-8b6c-2f0d9a7e5c3b
+        type: organization
+        name: CyberForge Program Office
+
+  imports:
+    - href: "#NIST_SP-800-53_rev5_catalog"
+      include-all: {}
+
+  merge:
+    as-is: true
+
+  modify:
+    # ── Access Control ──────────────────────────────────────────
+    alters:
+      - control-id: ac-2
+        title: "Account Management — Enhanced"
+        adds:
+          - position: after
+            props:
+              - name: label
+                value: "AC-2 JSIG"
+            parts:
+              - id: ac-2_jsig
+                name: statement
+                prose: >
+                  The organization must implement automated account management supporting:
+                  SIEM integration for account activity monitoring, privileged account
+                  time-limited access, and quarterly access recertification.
+
+      - control-id: ac-17
+        title: "Remote Access — Restricted"
+        adds:
+          - position: before
+            parts:
+              - id: ac-17_jsig
+                name: statement
+                prose: >
+                  Remote access is prohibited except through approved encrypted
+                  jump servers with MFA and session recording.
+
+    # ── Audit and Accountability ─────────────────────────────────
+      - control-id: au-2
+        title: "Event Logging — Required Events"
+        adds:
+          - position: after
+            parts:
+              - id: au-2_jsig
+                name: statement
+                prose: >
+                  At minimum, the following events must be logged: login/logoff,
+                  privilege escalation, policy changes, object access, and
+                  configuration changes. Logs must be forwarded to the centralized SIEM
+                  within 5 minutes of generation.
+
+      - control-id: au-9
+        title: "Protection of Audit Information"
+        adds:
+          - position: after
+            parts:
+              - id: au-9_jsig
+                name: statement
+                prose: >
+                  Audit logs must be stored in an immutable, append-only storage tier.
+                  Log integrity must be verified via cryptographic hash on a weekly basis.
+
+    # ── Configuration Management ─────────────────────────────────
+      - control-id: cm-6
+        title: "Configuration Settings — STIG Baseline"
+        adds:
+          - position: after
+            parts:
+              - id: cm-6_jsig
+                name: statement
+                prose: >
+                  All OS, container, and Kubernetes configurations must comply with
+                  the applicable DISA STIG. SCAP scans must achieve a minimum score
+                  of 80% before production deployment.
+
+    # ── Supply Chain ─────────────────────────────────────────────
+      - control-id: sr-11
+        title: "Component Authenticity"
+        adds:
+          - position: after
+            parts:
+              - id: sr-11_jsig
+                name: statement
+                prose: >
+                  All container images must be sourced from IronBank or an approved
+                  internal mirror, signed with Cosign, and have an attached SBOM
+                  attestation before deployment.

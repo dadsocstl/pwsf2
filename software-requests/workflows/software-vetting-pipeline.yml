@@ -1,1 +1,113 @@
-Main software vetting workflow
+# software-requests/workflows/software-vetting-pipeline.yml
+# Reusable workflow definition for software vetting.
+# This file describes the end-to-end software approval workflow steps.
+# The CI execution is in pipelines/software-requests/software-vetting.yml.
+
+workflow:
+  name: CyberForge Software Vetting Workflow
+  version: "1.0"
+  description: >
+    Validates submitted software requests through automated scanning and
+    structured human review before authorization.
+
+stages:
+  - id: intake
+    name: Request Intake
+    description: Validate the software request template is complete.
+    automated: true
+    steps:
+      - Verify all required fields are present in the request template.
+      - Check that package name, version, license, and justification are filled.
+    outputs:
+      - validated-request.json
+
+  - id: sbom
+    name: SBOM Generation
+    description: Generate a Software Bill of Materials for the requested package/image.
+    automated: true
+    tool: syft
+    config: supply-chain/sbom/syft-config.yaml
+    steps:
+      - Pull the target image or source package.
+      - Run Syft to generate SPDX and CycloneDX SBOM outputs.
+    outputs:
+      - sbom-output/sbom.spdx.json
+      - sbom-output/sbom.cdx.json
+
+  - id: vulnerability-scan
+    name: Vulnerability Scan
+    description: Scan the SBOM for known CVEs using Grype.
+    automated: true
+    tool: grype
+    fail-threshold: HIGH
+    steps:
+      - Load SBOM from previous stage.
+      - Query vulnerability database for matching CVEs.
+      - Fail pipeline if CRITICAL or HIGH CVEs are present without exemption.
+    outputs:
+      - vuln-output/grype-results.json
+
+  - id: license-check
+    name: License Review
+    description: Identify restricted or non-compliant licenses in the SBOM.
+    automated: true
+    restricted-licenses:
+      - GPL-3.0
+      - AGPL-3.0
+      - GPL-2.0-only
+    steps:
+      - Parse SBOM for declared licenses.
+      - Flag packages with restricted licenses for human review.
+    outputs:
+      - license-output/license-report.json
+
+  - id: sign-sbom
+    name: SBOM Attestation
+    description: Attach the signed SBOM as a Cosign attestation to the image.
+    automated: true
+    tool: cosign
+    steps:
+      - Sign the SBOM using the CyberForge Cosign key.
+      - Attach SPDX SBOM attestation to the image.
+
+  - id: security-review
+    name: Human Security Review
+    description: Security officer reviews scan results and approves or rejects.
+    automated: false
+    required-approvers:
+      - role: Security Reviewer
+        count: 1
+      - role: Authorizing Official
+        count: 1
+    steps:
+      - Review vulnerability scan report.
+      - Review license report for restricted licenses.
+      - Confirm SBOM is complete and accurate.
+      - Approve or reject the software request.
+    sla-days: 5
+
+  - id: authorization
+    name: Authorization to Operate (Component)
+    description: Record formal authorization for the software component.
+    automated: false
+    required-approvers:
+      - role: Authorizing Official
+        count: 1
+    steps:
+      - Generate authorization record with scan artifacts.
+      - Update OSCAL component definition with new component.
+      - Update compliance implementation records as needed.
+
+approval-notifications:
+  channels:
+    - type: email
+      recipients:
+        - security@example.mil
+        - ao@example.mil
+    - type: gitlab-comment
+      on: merge-request
+
+artifact-retention:
+  sbom: 3 years
+  scan-results: 3 years
+  authorization-record: 7 years

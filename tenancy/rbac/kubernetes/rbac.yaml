@@ -1,1 +1,139 @@
-Kubernetes RBAC for tenancy
+---
+# tenancy/rbac/kubernetes/rbac.yaml
+# Kubernetes RBAC definitions for CyberForge multi-tenancy.
+# Provides namespaced roles and bindings for tenant teams.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-alpha
+  labels:
+    cyberforge.mil/tenant: "alpha"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-bravo
+  labels:
+    cyberforge.mil/tenant: "bravo"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+# Tenant developer role: read/write to their namespace only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-developer
+  namespace: tenant-alpha
+  labels:
+    cyberforge.mil/managed-by: terraform
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, pods/exec, services, configmaps, persistentvolumeclaims]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch]
+
+---
+# Tenant read-only role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-readonly
+  namespace: tenant-alpha
+  labels:
+    cyberforge.mil/managed-by: terraform
+rules:
+  - apiGroups: ["", apps, batch, networking.k8s.io]
+    resources: ["*"]
+    verbs: [get, list, watch]
+
+---
+# Bind tenant-alpha developers
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-alpha-developers
+  namespace: tenant-alpha
+subjects:
+  - kind: Group
+    name: cyberforge:tenant-alpha:developers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: tenant-developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Bind tenant-bravo developers (same permission set as tenant-alpha)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-developer
+  namespace: tenant-bravo
+  labels:
+    cyberforge.mil/managed-by: terraform
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, pods/exec, services, configmaps, persistentvolumeclaims]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-bravo-developers
+  namespace: tenant-bravo
+subjects:
+  - kind: Group
+    name: cyberforge:tenant-bravo:developers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: tenant-developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Platform-wide compliance reader (cluster-level)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cyberforge-compliance-readers
+  labels:
+    cyberforge.mil/managed-by: terraform
+subjects:
+  - kind: Group
+    name: cyberforge:compliance:readers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io

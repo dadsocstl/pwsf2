@@ -1,1 +1,60 @@
-DAAPM controls reference CSV
+control_id,family,title,status,description,origin,nist_mapping
+AC-1,AC,Access Control Policy and Procedures,applicable,Develop, document, and disseminate access control policy and procedures.,Organization,AC-1
+AC-2,AC,Account Management,applicable,Manage information system accounts including identifying account types.,Organization,AC-2
+AC-3,AC,Access Enforcement,applicable,Enforce approved authorizations for logical access to information.,System,AC-3
+AC-4,AC,Information Flow Enforcement,applicable,Enforce approved authorizations for controlling the flow of information.,System,AC-4
+AC-6,AC,Least Privilege,applicable,Employ the principle of least privilege.,Organization,AC-6
+AC-7,AC,Unsuccessful Logon Attempts,applicable,Enforce a limit of consecutive invalid logon attempts.,System,AC-7
+AC-11,AC,Session Lock,applicable,Prevent further access via session lock after inactivity.,System,AC-11
+AC-17,AC,Remote Access,applicable,Establish and document usage restrictions for remote access.,Organization,AC-17
+AC-22,AC,Publicly Accessible Content,applicable,Designate individuals authorized to post publicly accessible content.,Organization,AC-22
+AT-1,AT,Security Awareness and Training Policy,applicable,Develop and maintain a security awareness training program.,Organization,AT-1
+AT-2,AT,Security Awareness Training,applicable,Provide security awareness training to all users.,Organization,AT-2
+AT-3,AT,Role-Based Security Training,applicable,Provide role-based security training to privileged users.,Organization,AT-3
+AU-1,AU,Audit and Accountability Policy,applicable,Develop and maintain audit and accountability policy.,Organization,AU-1
+AU-2,AU,Event Logging,applicable,Identify events that require auditing.,System,AU-2
+AU-3,AU,Content of Audit Records,applicable,Ensure audit records contain required information fields.,System,AU-3
+AU-6,AU,Audit Record Review Analysis and Reporting,applicable,Review and analyze audit records for inappropriate activity.,Organization,AU-6
+AU-8,AU,Time Stamps,applicable,Use internal system clocks to generate time stamps.,System,AU-8
+AU-9,AU,Protection of Audit Information,applicable,Protect audit information from unauthorized access/modification.,System,AU-9
+AU-11,AU,Audit Record Retention,applicable,Retain audit records for 3 years.,Organization,AU-11
+AU-12,AU,Audit Record Generation,applicable,Generate audit records for auditable events.,System,AU-12
+CA-1,CA,Assessment Authorization and Monitoring Policy,applicable,Develop and maintain security assessment and authorization policy.,Organization,CA-1
+CA-2,CA,Control Assessments,applicable,Assess security controls annually.,Organization,CA-2
+CA-5,CA,Plan of Action and Milestones,applicable,Develop and update plan of action and milestones.,Organization,CA-5
+CA-6,CA,Authorization,applicable,Assign a senior official to authorize the system.,Organization,CA-6
+CA-7,CA,Continuous Monitoring,applicable,Develop a continuous monitoring program.,Organization,CA-7
+CM-1,CM,Configuration Management Policy,applicable,Develop and maintain configuration management policy.,Organization,CM-1
+CM-2,CM,Baseline Configuration,applicable,Develop and maintain documented baseline configurations.,System,CM-2
+CM-6,CM,Configuration Settings,applicable,Establish and document configuration settings.,System,CM-6
+CM-7,CM,Least Functionality,applicable,Configure system to provide only essential capabilities.,System,CM-7
+CM-8,CM,System Component Inventory,applicable,Develop and document an inventory of system components.,Organization,CM-8
+CP-1,CP,Contingency Planning Policy,applicable,Develop and maintain contingency planning policy.,Organization,CP-1
+CP-9,CP,System Backup,applicable,Conduct backups of system-level and user-level information.,System,CP-9
+IA-1,IA,Identification and Authentication Policy,applicable,Develop and maintain identification and authentication policy.,Organization,IA-1
+IA-2,IA,Identification and Authentication (Org Users),applicable,Uniquely identify and authenticate organizational users.,System,IA-2
+IA-3,IA,Device Identification and Authentication,applicable,Uniquely identify and authenticate devices.,System,IA-3
+IA-5,IA,Authenticator Management,applicable,Manage information system authenticators.,System,IA-5
+IA-8,IA,Identification and Authentication (Non-Org Users),applicable,Uniquely identify and authenticate non-organizational users.,System,IA-8
+IR-1,IR,Incident Response Policy,applicable,Develop and maintain incident response policy.,Organization,IR-1
+IR-4,IR,Incident Handling,applicable,Implement an incident handling capability.,Organization,IR-4
+IR-5,IR,Incident Monitoring,applicable,Track and document incidents.,Organization,IR-5
+MA-1,MA,Maintenance Policy,applicable,Develop and maintain system maintenance policy.,Organization,MA-1
+MP-1,MP,Media Protection Policy,applicable,Develop and maintain media protection policy.,Organization,MP-1
+PE-1,PE,Physical and Environmental Protection Policy,applicable,Develop and maintain physical protection policy.,Organization,PE-1
+PL-1,PL,Planning Policy,applicable,Develop and maintain security planning policy.,Organization,PL-1
+PL-2,PL,System Security Plan,applicable,Develop, review, and update the system security plan.,Organization,PL-2
+PS-1,PS,Personnel Security Policy,applicable,Develop and maintain personnel security policy.,Organization,PS-1
+RA-1,RA,Risk Assessment Policy,applicable,Develop and maintain risk assessment policy.,Organization,RA-1
+RA-3,RA,Risk Assessment,applicable,Conduct a risk assessment of the information system.,Organization,RA-3
+RA-5,RA,Vulnerability Monitoring and Scanning,applicable,Monitor and scan for vulnerabilities in the system.,System,RA-5
+SA-1,SA,System and Services Acquisition Policy,applicable,Develop and maintain acquisition policy.,Organization,SA-1
+SA-4,SA,Acquisition Process,applicable,Include security requirements in acquisition contracts.,Organization,SA-4
+SC-1,SC,System and Communications Protection Policy,applicable,Develop and maintain system/communications protection policy.,Organization,SC-1
+SC-8,SC,Transmission Confidentiality and Integrity,applicable,Implement cryptographic mechanisms to protect data in transit.,System,SC-8
+SC-28,SC,Protection of Information at Rest,applicable,Protect the confidentiality and integrity of information at rest.,System,SC-28
+SI-1,SI,System and Information Integrity Policy,applicable,Develop and maintain system integrity policy.,Organization,SI-1
+SI-2,SI,Flaw Remediation,applicable,Identify and correct information system flaws.,Organization,SI-2
+SI-3,SI,Malicious Code Protection,applicable,Implement malicious code protection mechanisms.,System,SI-3
+SR-1,SR,Supply Chain Risk Management Policy,applicable,Develop and maintain supply chain risk management policy.,Organization,SR-1
+SR-11,SR,Component Authenticity,applicable,Employ anti-counterfeit technologies and inspection procedures.,System,SR-11

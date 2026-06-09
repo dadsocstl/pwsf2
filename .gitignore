@@ -1,0 +1,41 @@
+# Generated artifacts
+overlays/*/generated-*.yaml
+oscal-compliance/output/
+scap-results/
+scap-results-k8s/
+sbom-output/
+vuln-output/
+license-output/
+
+# Environment / secrets — never commit these
+.env
+*.tfvars
+!terraform.tfvars.example
+
+# Terraform state and cache
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# macOS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+/tmp/
+
+# Node (if any frontend tooling added later)
+node_modules/

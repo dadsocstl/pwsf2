@@ -1,1 +1,145 @@
-ELK stack values
+# platform-services/elk-stack/helm/values.yaml
+# Helm values for the Elastic (ECK) stack: Elasticsearch, Kibana, Logstash,
+# and Filebeat for centralized log management and SIEM.
+
+eck-elasticsearch:
+  enabled: true
+  fullnameOverride: cyberforge-es
+  nodeSets:
+    - name: default
+      count: 3
+      config:
+        node.store.allow_mmap: false
+        xpack.security.enabled: true
+        xpack.security.transport.ssl.enabled: true
+        xpack.security.http.ssl.enabled: true
+      podTemplate:
+        spec:
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ["sh", "-c", "sysctl -w vm.max_map_count=262144"]
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 2Gi
+                  cpu: 500m
+                limits:
+                  memory: 4Gi
+                  cpu: 2000m
+              env:
+                - name: ES_JAVA_OPTS
+                  value: "-Xms2g -Xmx2g"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
+            storageClassName: gp3
+
+eck-kibana:
+  enabled: true
+  fullnameOverride: cyberforge-kibana
+  spec:
+    count: 2
+    elasticsearchRef:
+      name: cyberforge-es
+    config:
+      xpack.security.enabled: true
+      # KIBANA_ENCRYPTION_KEY must be set as a Kubernetes Secret and injected
+      # as an environment variable by the ECK operator or Vault agent sidecar.
+      # See: https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.html
+      xpack.encryptedSavedObjects.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
+    podTemplate:
+      spec:
+        containers:
+          - name: kibana
+            resources:
+              requests:
+                memory: 512Mi
+                cpu: 250m
+              limits:
+                memory: 1Gi
+                cpu: 1000m
+            securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+
+logstash:
+  enabled: true
+  replicas: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  persistence:
+    enabled: true
+    size: 20Gi
+  config:
+    logstash.yml: |
+      http.host: "0.0.0.0"
+      xpack.monitoring.enabled: true
+  pipelines:
+    main: |
+      input {
+        beats {
+          port => 5044
+          ssl  => true
+        }
+      }
+      filter {
+        if [type] == "syslog" {
+          grok {
+            match => { "message" => "%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{DATA:syslog_program}(?:\[%{POSINT:syslog_pid}\])?: %{GREEDYDATA:syslog_message}" }
+          }
+        }
+      }
+      output {
+        elasticsearch {
+          hosts => ["https://cyberforge-es-es-http:9200"]
+          index => "cyberforge-logs-%{+YYYY.MM.dd}"
+          ssl   => true
+          cacert => "/usr/share/logstash/config/es-ca.crt"
+        }
+      }
+
+filebeat:
+  enabled: true
+  daemonset:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  filebeatConfig:
+    filebeat.yml: |
+      filebeat.autodiscover:
+        providers:
+          - type: kubernetes
+            node: ${NODE_NAME}
+            hints.enabled: true
+      output.logstash:
+        hosts: ["logstash:5044"]
+        ssl.certificate_authorities: ["/usr/share/filebeat/config/ca.crt"]

@@ -1,1 +1,93 @@
-Falco rules for sidecar
+customRules: |
+  # CyberForge Falco rules for sidecar security monitoring
+  # These rules detect anomalous activity inside application pods.
+
+  # Rule: Detect shell spawned in a container
+  - rule: Terminal shell in container
+    desc: A shell was spawned by a non-shell program in a container
+    condition: >
+      spawned_process
+      and container
+      and container.name != ""
+      and proc.name in (shell_binaries)
+      and proc.pname exists
+      and not proc.pname in (shell_binaries, docker_binaries, k8s_binaries, needless_rebinds)
+      and not user_known_shell_spawn_binaries
+    output: >
+      Shell spawned in a container
+      (user=%user.name user_loginuid=%user.loginuid %container.info
+       parent=%proc.pname cmdline=%proc.cmdline terminal=%proc.tty
+       container_id=%container.id image=%container.image.repository)
+    priority: WARNING
+    tags: [container, shell, T1059]
+
+  # Rule: Detect write below /etc in container
+  - rule: Write below etc in container
+    desc: An attempt was made to write to /etc in a running container
+    condition: >
+      open_write
+      and container
+      and container.name != ""
+      and fd.name startswith /etc
+      and not etc_dir_proxy_execution
+    output: >
+      File below /etc written in container
+      (user=%user.name pcmdline=%proc.pcmdline file=%fd.name
+       parent=%proc.pname command=%proc.cmdline container_id=%container.id
+       image=%container.image.repository)
+    priority: ERROR
+    tags: [container, filesystem, T1565]
+
+  # Rule: Detect outbound network from container (unexpected)
+  - rule: Unexpected outbound connection
+    desc: A container established a network connection to an unexpected external IP
+    condition: >
+      outbound
+      and container
+      and container.name != ""
+      and not (fd.sip in (allowed_outbound_destination_ipaddresses))
+      and not fd.sip in ("127.0.0.1", "::1")
+    output: >
+      Unexpected outbound connection
+      (command=%proc.cmdline pid=%proc.pid connection=%fd.name
+       container_id=%container.id image=%container.image.repository)
+    priority: WARNING
+    tags: [network, container, T1071]
+
+  # Rule: Privilege escalation attempt
+  - rule: Container privilege escalation attempt
+    desc: Attempt to gain elevated privileges inside a container
+    condition: >
+      evt.type = setuid
+      and container
+      and evt.arg.uid = 0
+      and not proc.name in (known_setuid_binaries)
+      and not proc.pname in (known_setuid_binaries)
+    output: >
+      Privilege escalation attempt in container
+      (user=%user.name command=%proc.cmdline container=%container.name
+       image=%container.image.repository)
+    priority: CRITICAL
+    tags: [container, privilege-escalation, T1548]
+
+  # Rule: Sensitive file access
+  - rule: Read sensitive file in container
+    desc: Sensitive files (credentials, keys) were read inside a container
+    condition: >
+      open_read
+      and container
+      and (
+        fd.name startswith /etc/shadow
+        or fd.name startswith /etc/sudoers
+        or fd.name startswith /root/.ssh
+        or fd.name startswith /home
+        and fd.name endswith "/.ssh/id_rsa"
+      )
+      and not proc.name in (known_sa_list_in_local_inodes_processes)
+    output: >
+      Sensitive file read in container
+      (user=%user.name name=%proc.name command=%proc.cmdline
+       file=%fd.name container=%container.name
+       image=%container.image.repository)
+    priority: WARNING
+    tags: [container, filesystem, T1552]

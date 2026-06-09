@@ -1,1 +1,65 @@
-NIST OSCAL catalog XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NIST SP 800-53 Rev 5 OSCAL Catalog — CyberForge Reference Stub
+     This is a representative stub for repository scaffolding.
+     The authoritative catalog is available from https://github.com/usnistgov/OSCAL
+     Run: scripts/baselines/sync-stig-baselines.sh to download the full content.
+-->
+<catalog xmlns="http://csrc.nist.gov/ns/oscal/1.0"
+         uuid="74c8ba1e-5d11-4f8d-8c2e-e7a4c3b7d9f2">
+  <metadata>
+    <title>NIST SP 800-53 Rev 5 — CyberForge Reference Stub</title>
+    <last-modified>2024-01-15T00:00:00Z</last-modified>
+    <version>5.1.1</version>
+    <oscal-version>1.0.4</oscal-version>
+    <remarks>
+      Stub catalog for CyberForge repository scaffolding.
+      Download the full catalog from NIST using sync-stig-baselines.sh.
+    </remarks>
+  </metadata>
+
+  <group id="ac" class="family">
+    <title>Access Control</title>
+    <control id="ac-1" class="SP800-53">
+      <title>Policy and Procedures</title>
+      <prop name="label" value="AC-1"/>
+      <prop name="sort-id" value="ac-01"/>
+    </control>
+    <control id="ac-2" class="SP800-53">
+      <title>Account Management</title>
+      <prop name="label" value="AC-2"/>
+      <prop name="sort-id" value="ac-02"/>
+    </control>
+  </group>
+
+  <group id="au" class="family">
+    <title>Audit and Accountability</title>
+    <control id="au-2" class="SP800-53">
+      <title>Event Logging</title>
+      <prop name="label" value="AU-2"/>
+      <prop name="sort-id" value="au-02"/>
+    </control>
+    <control id="au-9" class="SP800-53">
+      <title>Protection of Audit Information</title>
+      <prop name="label" value="AU-9"/>
+      <prop name="sort-id" value="au-09"/>
+    </control>
+  </group>
+
+  <group id="cm" class="family">
+    <title>Configuration Management</title>
+    <control id="cm-6" class="SP800-53">
+      <title>Configuration Settings</title>
+      <prop name="label" value="CM-6"/>
+      <prop name="sort-id" value="cm-06"/>
+    </control>
+  </group>
+
+  <group id="sr" class="family">
+    <title>Supply Chain Risk Management</title>
+    <control id="sr-11" class="SP800-53">
+      <title>Component Authenticity</title>
+      <prop name="label" value="SR-11"/>
+      <prop name="sort-id" value="sr-11"/>
+    </control>
+  </group>
+</catalog>
