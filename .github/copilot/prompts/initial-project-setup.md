@@ -1,0 +1,1 @@
+Comprehensive starting prompt for GitHub Copilot to begin working on the CyberForge project
