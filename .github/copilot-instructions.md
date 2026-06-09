@@ -1,0 +1,1 @@
+Enhanced main Copilot instructions for agent behavior

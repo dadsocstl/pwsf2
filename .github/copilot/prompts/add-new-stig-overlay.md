@@ -1,0 +1,1 @@
+Reusable prompt for adding new STIG overlays
