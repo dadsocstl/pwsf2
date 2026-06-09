@@ -1,1 +1,1 @@
-Terraform variables
+Full Terraform variables

@@ -1,1 +1,1 @@
-Kubernetes cluster module
+Full Kubernetes cluster module

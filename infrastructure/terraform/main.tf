@@ -1,1 +1,1 @@
-Main Terraform configuration
+Full main Terraform configuration for CyberForge

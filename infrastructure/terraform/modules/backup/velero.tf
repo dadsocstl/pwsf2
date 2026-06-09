@@ -1,1 +1,1 @@
-Velero backup module
+Full Velero backup module
