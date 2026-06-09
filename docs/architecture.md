@@ -1,1 +1,1 @@
-Architecture documentation
+Full architecture documentation

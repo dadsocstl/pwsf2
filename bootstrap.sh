@@ -1,1 +1,1 @@
-Full bootstrap.sh for environment setup
+Full bootstrap.sh script
