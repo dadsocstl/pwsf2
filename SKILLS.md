@@ -1,0 +1,1 @@
+Full SKILLS.md for the project

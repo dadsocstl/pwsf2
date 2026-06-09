@@ -1,0 +1,1 @@
+RHEL9 STIG profile from ComplianceAsCode
