@@ -1,1 +1,71 @@
-SBOM generation config
+# supply-chain/sbom/syft-config.yaml
+# Syft SBOM generation configuration for CyberForge.
+# Controls output formats, cataloger behavior, and exclusion rules.
+
+# Output formats to generate when running syft
+# Multiple formats can be specified
+default-image-pull-source: registry
+
+output:
+  - spdx-json
+  - cyclonedx-json
+  - table
+
+# File catalogers to enable
+catalogers:
+  - go-module-binary-cataloger
+  - python-installed-package-cataloger
+  - python-package-cataloger
+  - javascript-package-cataloger
+  - rpm-db-cataloger
+  - dpkg-db-cataloger
+  - apk-db-cataloger
+  - java-pom-cataloger
+  - java-gradle-lockfile-cataloger
+  - dotnet-deps-cataloger
+
+# Package deduplication
+package:
+  search-indexed-archives: true
+  search-unindexed-archives: false
+
+# File content cataloging for secrets detection
+file-contents:
+  cataloger:
+    enabled: true
+    skip-files-above-size: 1048576  # 1 MB
+  classifications: []
+
+# Registry configuration for private/air-gapped environments
+registry:
+  insecure-skip-tls-verify: false
+  insecure-use-http: false
+  auth:
+    - authority: registry.example.mil
+      username: "${REGISTRY_USERNAME}"
+      password: "${REGISTRY_PASSWORD}"
+    - authority: ironbank.dso.mil
+      username: "${IRONBANK_USERNAME}"
+      password: "${IRONBANK_PASSWORD}"
+
+# Paths to exclude from scanning
+exclude:
+  - "**/.git/**"
+  - "**/node_modules/**"
+  - "**/__pycache__/**"
+  - "**/vendor/**"
+  - "**/*.test"
+  - "**/*_test.go"
+
+# Platform detection
+platform: linux/amd64
+
+# Source for base image layers (for distroless and scratch images)
+source:
+  image:
+    default-pull-source: docker
+
+# Log level
+log:
+  level: warn
+  file: ""

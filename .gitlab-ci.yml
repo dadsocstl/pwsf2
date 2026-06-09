@@ -1,1 +1,124 @@
-Main GitLab CI configuration
+# .gitlab-ci.yml
+# CyberForge main GitLab CI/CD pipeline.
+# Orchestrates compliance scanning, software vetting, and supply-chain signing.
+
+default:
+  image: registry.example.mil/ironbank-mirror/ubi9-minimal:latest
+  tags:
+    - cyberforge-runner
+
+variables:
+  KUBECONFIG: "${CI_PROJECT_DIR}/.kube/config"
+  TF_IN_AUTOMATION: "true"
+  COSIGN_YES: "true"
+  SIGSTORE_NO_TLOG_UPLOAD: "true"   # air-gapped: skip transparency log
+
+stages:
+  - lint
+  - validate
+  - scan
+  - sign
+  - deploy
+
+# ──────────────────────────────────────────────
+# Lint stage
+# ──────────────────────────────────────────────
+lint:yaml:
+  stage: lint
+  script:
+    - find . -name "*.yaml" -o -name "*.yml" | xargs yamllint -c .yamllint || true
+  allow_failure: true
+
+lint:terraform:
+  stage: lint
+  image: registry.example.mil/ironbank-mirror/hashicorp/terraform:1.7
+  script:
+    - cd infrastructure/terraform
+    - terraform fmt -check -recursive
+  allow_failure: true
+
+# ──────────────────────────────────────────────
+# Validate stage
+# ──────────────────────────────────────────────
+validate:project:
+  stage: validate
+  script:
+    - bash scripts/validate-project.sh
+  artifacts:
+    when: always
+    paths:
+      - /tmp/cyberforge-validation.log
+    expire_in: 7 days
+
+validate:kyverno:
+  stage: validate
+  image: registry.example.mil/ironbank-mirror/kyverno/kyverno-cli:v1.12
+  script:
+    - kyverno test platform-services/policy-engines/kyverno/
+    - kyverno test baselines/sidecar-stack/kyverno/
+  allow_failure: true
+
+# ──────────────────────────────────────────────
+# Scan stage
+# ──────────────────────────────────────────────
+scan:scap:
+  stage: scan
+  extends: .scap_job
+  trigger:
+    include: pipelines/compliance/scap-scan.yml
+
+scan:software-vetting:
+  stage: scan
+  trigger:
+    include: pipelines/software-requests/software-vetting.yml
+
+scan:container:
+  stage: scan
+  image: registry.example.mil/ironbank-mirror/aquasec/trivy:latest
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL
+        --ignore-unfixed
+        "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+  allow_failure: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_MERGE_REQUEST_ID
+
+# ──────────────────────────────────────────────
+# Sign stage
+# ──────────────────────────────────────────────
+sign:images:
+  stage: sign
+  extends: .cosign_job
+  trigger:
+    include: pipelines/supply-chain/cosign-sign.yml
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# ──────────────────────────────────────────────
+# Deploy stage
+# ──────────────────────────────────────────────
+deploy:argocd-sync:
+  stage: deploy
+  image: registry.example.mil/ironbank-mirror/argocd:v2.10.4
+  script:
+    - argocd login "${ARGOCD_SERVER}" --auth-token "${ARGOCD_AUTH_TOKEN}" --grpc-web
+    - argocd app sync cyberforge --prune --force
+    - argocd app wait cyberforge --health --timeout 300
+  environment:
+    name: production
+    url: https://argocd.example.mil
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+
+# ──────────────────────────────────────────────
+# Hidden job templates
+# ──────────────────────────────────────────────
+.scap_job:
+  variables:
+    SCAP_PROFILE: xccdf_org.ssgproject.content_profile_stig
+    SCAP_DS: baselines/os-stig/stig-rhel9-ds.xml
+
+.cosign_job:
+  variables:
+    COSIGN_KEY_PATH: /vault/secrets/cosign.key

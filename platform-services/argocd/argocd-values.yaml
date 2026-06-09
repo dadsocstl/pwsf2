@@ -1,1 +1,112 @@
-ArgoCD values
+# platform-services/argocd/argocd-values.yaml
+# Helm values for ArgoCD deployment in the CyberForge platform.
+# Hardened configuration with RBAC, SSO, and resource limits.
+
+global:
+  image:
+    tag: v2.10.4
+
+server:
+  replicas: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    type: ClusterIP
+  metrics:
+    enabled: true
+  config:
+    # Disable admin account in production — use SSO
+    admin.enabled: "false"
+    # OIDC/Dex integration (configure dex section below)
+    url: https://argocd.example.mil
+    # Repository credential templates
+    repositories: |
+      - url: https://registry.example.mil/helm
+        type: helm
+    resource.exclusions: |
+      - apiGroups:
+          - cilium.io
+        kinds:
+          - CiliumIdentity
+        clusters:
+          - "*"
+
+  rbacConfig:
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:platform-admin, applications, *, */*, allow
+      p, role:platform-admin, clusters, get, *, allow
+      p, role:platform-admin, repositories, *, *, allow
+      p, role:developer, applications, get, */*, allow
+      p, role:developer, applications, sync, */*, allow
+      g, cyberforge-admins, role:platform-admin
+      g, cyberforge-developers, role:developer
+
+dex:
+  enabled: true
+  image:
+    tag: v2.38.0
+
+repoServer:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+
+applicationSet:
+  enabled: true
+  replicas: 2
+
+notifications:
+  enabled: true
+
+redis:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+configs:
+  secret:
+    createSecret: true
+  params:
+    # Force HTTPS
+    server.insecure: false
+    # Disable host-based routing
+    server.enable.proxy.extension: "false"
+
+# Pod security
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 999
+  fsGroup: 999
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true

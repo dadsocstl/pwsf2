@@ -1,1 +1,164 @@
-Software vetting pipeline with CCI parsing
+# pipelines/software-requests/software-vetting.yml
+# GitLab CI pipeline: Software vetting workflow.
+# Runs SBOM generation, vulnerability scanning, and supply-chain checks
+# for software request submissions.
+
+stages:
+  - intake
+  - sbom
+  - scan
+  - sign
+  - approve
+
+variables:
+  SYFT_CONFIG: "${CI_PROJECT_DIR}/supply-chain/sbom/syft-config.yaml"
+  GRYPE_DB_CACHE_DIR: "${CI_PROJECT_DIR}/.grype/db"
+  COSIGN_KEY_PATH: /vault/secrets/cosign.key
+
+# ──────────────────────────────────────────────
+# Intake: validate the software request template
+# ──────────────────────────────────────────────
+intake:validate-request:
+  stage: intake
+  image: registry.example.mil/ironbank-mirror/ubi9-minimal:latest
+  script:
+    - |
+      echo "Validating software request..."
+      # Check required fields in request template
+      REQUEST_FILE=$(find software-requests/ -name "*.md" | head -1)
+      if [[ -z "${REQUEST_FILE}" ]]; then
+        echo "ERROR: No software request file found in software-requests/"
+        exit 1
+      fi
+      for field in "Package Name" "Version" "Justification" "Risk Level"; do
+        if ! grep -qi "${field}" "${REQUEST_FILE}"; then
+          echo "ERROR: Required field '${field}' missing in ${REQUEST_FILE}"
+          exit 1
+        fi
+      done
+      echo "Software request validation passed: ${REQUEST_FILE}"
+
+# ──────────────────────────────────────────────
+# SBOM: Generate Software Bill of Materials
+# ──────────────────────────────────────────────
+sbom:generate:
+  stage: sbom
+  image: registry.example.mil/ironbank-mirror/anchore/syft:v1.1.0
+  script:
+    - mkdir -p sbom-output
+    - |
+      syft \
+        --config "${SYFT_CONFIG}" \
+        "${TARGET_IMAGE:-registry.example.mil/cyberforge/platform:latest}" \
+        -o spdx-json=sbom-output/sbom.spdx.json \
+        -o cyclonedx-json=sbom-output/sbom.cdx.json \
+        -o table=sbom-output/sbom.txt
+    - echo "SBOM generated:"
+    - cat sbom-output/sbom.txt | head -50
+  artifacts:
+    paths:
+      - sbom-output/
+    expire_in: 90 days
+  variables:
+    TARGET_IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+
+# ──────────────────────────────────────────────
+# Scan: Vulnerability analysis
+# ──────────────────────────────────────────────
+scan:vulnerabilities:
+  stage: scan
+  image: registry.example.mil/ironbank-mirror/anchore/grype:v0.78.0
+  needs: [sbom:generate]
+  script:
+    - mkdir -p vuln-output
+    - |
+      grype \
+        sbom:sbom-output/sbom.spdx.json \
+        --fail-on high \
+        -o json \
+        > vuln-output/grype-results.json || EXIT_CODE=$?
+    - |
+      python3 - <<'PYEOF'
+import json, sys
+with open("vuln-output/grype-results.json") as f:
+    data = json.load(f)
+matches = data.get("matches", [])
+severities = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+for m in matches:
+    sev = m.get("vulnerability", {}).get("severity", "UNKNOWN").upper()
+    severities[sev] = severities.get(sev, 0) + 1
+print("=== Vulnerability Summary ===")
+for sev, count in severities.items():
+    print(f"  {sev:<10}: {count}")
+total_critical_high = severities["CRITICAL"] + severities["HIGH"]
+if total_critical_high > 0:
+    print(f"\nFAIL: {total_critical_high} critical/high vulnerabilities found.")
+    sys.exit(1)
+else:
+    print("\nPASS: No critical or high vulnerabilities found.")
+PYEOF
+  artifacts:
+    when: always
+    paths:
+      - vuln-output/
+    expire_in: 90 days
+
+scan:license:
+  stage: scan
+  image: registry.example.mil/ironbank-mirror/ubi9-minimal:latest
+  needs: [sbom:generate]
+  script:
+    - |
+      echo "Checking SBOM for restricted licenses..."
+      python3 - <<'PYEOF'
+import json
+with open("sbom-output/sbom.spdx.json") as f:
+    sbom = json.load(f)
+restricted = ["GPL-3.0", "AGPL-3.0", "GPL-2.0-only", "LGPL-3.0"]
+violations = []
+for pkg in sbom.get("packages", []):
+    declared = pkg.get("licenseDeclared", "NOASSERTION")
+    for r in restricted:
+        if r in declared:
+            violations.append(f"{pkg.get('name', 'unknown')}@{pkg.get('versionInfo', '?')}: {declared}")
+if violations:
+    print("LICENSE REVIEW REQUIRED:")
+    for v in violations:
+        print(f"  - {v}")
+else:
+    print("No restricted licenses detected.")
+PYEOF
+
+# ──────────────────────────────────────────────
+# Sign: Attest the SBOM with Cosign
+# ──────────────────────────────────────────────
+sign:attest-sbom:
+  stage: sign
+  image: registry.example.mil/ironbank-mirror/sigstore/cosign:v2.2.4
+  needs: [scan:vulnerabilities]
+  script:
+    - |
+      cosign attest \
+        --key "${COSIGN_KEY_PATH}" \
+        --predicate sbom-output/sbom.spdx.json \
+        --type spdxjson \
+        "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# ──────────────────────────────────────────────
+# Approve: Notify approvers
+# ──────────────────────────────────────────────
+approve:notify:
+  stage: approve
+  image: registry.example.mil/ironbank-mirror/ubi9-minimal:latest
+  script:
+    - |
+      echo "Software vetting complete. Notifying approvers..."
+      # In production: send to ITSM or email
+      echo "Pipeline: ${CI_PIPELINE_URL}"
+      echo "Artifacts: sbom-output/, vuln-output/"
+  environment:
+    name: software-review
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"

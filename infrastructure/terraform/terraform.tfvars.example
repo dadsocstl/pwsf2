@@ -1,1 +1,20 @@
-Example tfvars
+# terraform.tfvars.example
+# Copy to terraform.tfvars and populate values for your environment.
+# Do NOT commit terraform.tfvars with real secrets or sensitive data.
+
+region        = "us-gov-west-1"
+cluster_name  = "cyberforge"
+vpc_cidr      = "10.0.0.0/16"
+node_count    = 3
+instance_type = "m5.2xlarge"
+backup_bucket = "cyberforge-backups"
+
+kubeconfig_path = "~/.kube/config"
+kube_context    = "cyberforge-prod"
+
+common_tags = {
+  project     = "cyberforge"
+  environment = "production"
+  managed_by  = "terraform"
+  compliance  = "nist-800-53"
+}

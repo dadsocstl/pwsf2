@@ -1,1 +1,63 @@
-Kyverno signed images policy
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Validates that all container images are signed using Cosign and the
+      CyberForge trust root. Unsigned images are rejected at admission.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-image-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaceSelector:
+                matchExpressions:
+                  - key: "cyberforge.mil/exempt-signing"
+                    operator: DoesNotExist
+      verifyImages:
+        - imageReferences:
+            - "registry.example.mil/*"
+            - "quay.io/cyberforge/*"
+          attestors:
+            - count: 1
+              entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      # Replace with your Cosign public key
+                      -----END PUBLIC KEY-----
+                    signatureAlgorithm: sha256
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+
+    - name: disallow-unsigned-registries
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Images must be sourced from approved registries."
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: NotIn
+                    value:
+                      - "registry.example.mil/*"
+                      - "quay.io/cyberforge/*"
+                      - "registry.access.redhat.com/*"
+                      - "ironbank.dso.mil/*"

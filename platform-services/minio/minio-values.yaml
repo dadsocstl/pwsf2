@@ -1,1 +1,89 @@
-MinIO values for air-gapped storage
+# platform-services/minio/minio-values.yaml
+# Helm values for MinIO in air-gapped artifact storage mode.
+# Used as the primary S3-compatible object store in disconnected environments.
+
+image:
+  repository: quay.io/minio/minio
+  tag: RELEASE.2024-03-26T22-10-45Z
+  pullPolicy: IfNotPresent
+
+mode: distributed
+
+replicas: 4
+drivesPerNode: 2
+
+resources:
+  requests:
+    memory: 1Gi
+    cpu: 250m
+  limits:
+    memory: 2Gi
+    cpu: 1000m
+
+persistence:
+  enabled: true
+  size: 500Gi
+  storageClass: gp3
+  accessMode: ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 9000
+
+consoleService:
+  type: ClusterIP
+  port: 9001
+
+# Use Kubernetes secrets for credentials — do not hard-code here
+existingSecret: minio-credentials
+# Secret must contain keys: rootUser, rootPassword
+
+tls:
+  enabled: true
+  certSecret: minio-tls
+  publicCrt: public.crt
+  privateKey: private.key
+
+# STIG / CIS hardening
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false  # MinIO requires writable /tmp
+
+# Lifecycle / policies
+policies:
+  - name: cyberforge-readwrite
+    statements:
+      - resources:
+          - "arn:aws:s3:::cyberforge-artifacts/*"
+        actions:
+          - "s3:GetObject"
+          - "s3:PutObject"
+          - "s3:DeleteObject"
+          - "s3:ListBucket"
+        effect: "Allow"
+
+buckets:
+  - name: cyberforge-artifacts
+    policy: none
+    versioning: true
+    objectlocking: false
+  - name: cyberforge-backups
+    policy: none
+    versioning: true
+    objectlocking: true
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring

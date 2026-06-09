@@ -1,1 +1,97 @@
-SCAP scan pipeline
+# pipelines/compliance/scap-scan.yml
+# GitLab CI job: Run OpenSCAP SCAP scan against the RHEL 9 STIG benchmark
+# and parse CCI results into a structured report.
+
+.scap_defaults:
+  image: registry.example.mil/ironbank-mirror/ubi9-minimal:latest
+  before_script:
+    - dnf install -y openscap-scanner scap-security-guide python3 python3-pyyaml || true
+
+stages:
+  - scan
+  - report
+
+scap:rhel9:
+  stage: scan
+  extends: .scap_defaults
+  variables:
+    SCAP_DS: "/usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml"
+    SCAP_PROFILE: "xccdf_org.ssgproject.content_profile_stig"
+    SCAP_RESULTS_DIR: "${CI_PROJECT_DIR}/scap-results"
+    TARGET_HOST: "localhost"
+  script:
+    - mkdir -p "${SCAP_RESULTS_DIR}"
+    - |
+      oscap xccdf eval \
+        --profile "${SCAP_PROFILE}" \
+        --results "${SCAP_RESULTS_DIR}/xccdf-results.xml" \
+        --results-arf "${SCAP_RESULTS_DIR}/arf-results.xml" \
+        --report "${SCAP_RESULTS_DIR}/report.html" \
+        --fetch-remote-resources \
+        "${SCAP_DS}" || true
+    - echo "SCAP scan complete. Parsing CCI findings..."
+    - |
+      python3 scripts/scap/parse-scap-cci.py \
+        --input "${SCAP_RESULTS_DIR}/arf-results.xml" \
+        --output "${SCAP_RESULTS_DIR}/cci-findings.json" \
+        --format json || true
+  artifacts:
+    when: always
+    paths:
+      - scap-results/
+    reports:
+      junit: scap-results/cci-findings.json
+    expire_in: 30 days
+
+scap:kubernetes:
+  stage: scan
+  extends: .scap_defaults
+  variables:
+    SCAP_DS: "/usr/share/xml/scap/ssg/content/ssg-eks-ds.xml"
+    SCAP_PROFILE: "xccdf_org.ssgproject.content_profile_cis"
+    SCAP_RESULTS_DIR: "${CI_PROJECT_DIR}/scap-results-k8s"
+  script:
+    - mkdir -p "${SCAP_RESULTS_DIR}"
+    - |
+      oscap xccdf eval \
+        --profile "${SCAP_PROFILE}" \
+        --results "${SCAP_RESULTS_DIR}/k8s-xccdf-results.xml" \
+        --report "${SCAP_RESULTS_DIR}/k8s-report.html" \
+        "${SCAP_DS}" || true
+  artifacts:
+    when: always
+    paths:
+      - scap-results-k8s/
+    expire_in: 30 days
+
+compliance:report:
+  stage: report
+  extends: .scap_defaults
+  script:
+    - |
+      if [[ -f scap-results/cci-findings.json ]]; then
+        python3 - <<'PYEOF'
+import json, sys
+with open("scap-results/cci-findings.json") as f:
+    report = json.load(f)
+summary = report.get("summary", {})
+print(f"=== CCI Compliance Summary ===")
+print(f"  Total rules  : {summary.get('total', 0)}")
+print(f"  Pass         : {summary.get('pass', 0)}")
+print(f"  Fail         : {summary.get('fail', 0)}")
+print(f"  Not checked  : {summary.get('notchecked', 0)}")
+fail = summary.get('fail', 0)
+total = summary.get('total', 1)
+score = ((total - fail) / total) * 100 if total > 0 else 0
+print(f"  Score        : {score:.1f}%")
+if fail > 0:
+    print(f"\nFailing rules:")
+    for finding in report.get("findings", []):
+        if finding["result"].lower() in ("fail", "error"):
+            print(f"  - {finding['rule_id']}  CCIs: {', '.join(finding.get('ccis', []))}")
+PYEOF
+      else
+        echo "No CCI findings file found."
+      fi
+  needs: [scap:rhel9]
+  dependencies: [scap:rhel9]

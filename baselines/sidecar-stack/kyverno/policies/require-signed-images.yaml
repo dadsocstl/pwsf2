@@ -1,1 +1,65 @@
-Kyverno policy example
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images-sidecar
+  annotations:
+    policies.kyverno.io/title: Require Signed Sidecar Images
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Validates that all container images (including sidecar injected containers)
+      are signed with the CyberForge Cosign key.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-sidecar-signatures
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaceSelector:
+                matchExpressions:
+                  - key: "cyberforge.mil/exempt-signing"
+                    operator: DoesNotExist
+      verifyImages:
+        - imageReferences:
+            - "registry.example.mil/cyberforge/sidecar-*"
+            - "ironbank.dso.mil/*"
+          attestors:
+            - count: 1
+              entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      # Replace with your Cosign public key
+                      -----END PUBLIC KEY-----
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+
+    - name: disallow-latest-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Image tag ':latest' is not permitted. Use an explicit version tag."
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: Contains
+                    value: ":latest"
+          - list: "request.object.spec.initContainers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: Contains
+                    value: ":latest"

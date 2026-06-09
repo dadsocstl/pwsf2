@@ -1,1 +1,119 @@
-Main CyberForge OSCAL Component Definition
+{
+  "component-definition": {
+    "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "metadata": {
+      "title": "CyberForge Platform Component Definition",
+      "last-modified": "2024-01-15T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.0.4",
+      "parties": [
+        {
+          "uuid": "9e3c7b1a-5d4f-4e2a-8b6c-2f0d9a7e5c3b",
+          "type": "organization",
+          "name": "CyberForge Program Office",
+          "email-addresses": ["security@example.mil"]
+        }
+      ]
+    },
+    "components": [
+      {
+        "uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "type": "software",
+        "title": "CyberForge Kubernetes Platform",
+        "description": "Kubernetes-based secure platform with STIG hardening and policy enforcement.",
+        "purpose": "Provides the compute and orchestration layer for CyberForge workloads.",
+        "responsible-roles": [
+          {
+            "role-id": "provider",
+            "party-uuids": ["9e3c7b1a-5d4f-4e2a-8b6c-2f0d9a7e5c3b"]
+          }
+        ],
+        "control-implementations": [
+          {
+            "uuid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+            "source": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+            "description": "NIST SP 800-53 Rev 5 control implementations for the Kubernetes platform.",
+            "implemented-requirements": [
+              {
+                "uuid": "d4e5f6a7-b8c9-0123-defa-234567890123",
+                "control-id": "ac-2",
+                "description": "Account management is implemented via Kubernetes RBAC backed by OIDC/AD.",
+                "statements": [
+                  {
+                    "statement-id": "ac-2_smt.a",
+                    "uuid": "e5f6a7b8-c9d0-1234-efab-345678901234",
+                    "description": "Account types are defined in rbac.yaml; service accounts follow least-privilege."
+                  }
+                ]
+              },
+              {
+                "uuid": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+                "control-id": "au-2",
+                "description": "Audit logging is provided by the ELK stack. All API server events are forwarded.",
+                "statements": [
+                  {
+                    "statement-id": "au-2_smt.a",
+                    "uuid": "a7b8c9d0-e1f2-3456-abcd-567890123456",
+                    "description": "Kubernetes API audit policy logs all create, update, delete, and sensitive get events."
+                  }
+                ]
+              },
+              {
+                "uuid": "b8c9d0e1-f2a3-4567-bcde-678901234567",
+                "control-id": "cm-6",
+                "description": "STIG-compliant configurations enforced via Kyverno policies and OS hardening playbook.",
+                "statements": [
+                  {
+                    "statement-id": "cm-6_smt.a",
+                    "uuid": "c9d0e1f2-a3b4-5678-cdef-789012345678",
+                    "description": "Container STIG policies in baselines/container-stig/ enforce runtime configuration."
+                  }
+                ]
+              },
+              {
+                "uuid": "d0e1f2a3-b4c5-6789-defa-890123456789",
+                "control-id": "sr-11",
+                "description": "All images must be signed with Cosign and sourced from IronBank or approved mirrors.",
+                "statements": [
+                  {
+                    "statement-id": "sr-11_smt.a",
+                    "uuid": "e1f2a3b4-c5d6-7890-efab-901234567890",
+                    "description": "Kyverno ClusterPolicy 'require-signed-images' enforces this at admission."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "uuid": "f2a3b4c5-d6e7-8901-fabc-012345678901",
+        "type": "software",
+        "title": "HashiCorp Vault",
+        "description": "Secrets management service providing dynamic credentials and key management.",
+        "purpose": "Centralizes secrets management and PKI for CyberForge workloads.",
+        "control-implementations": [
+          {
+            "uuid": "a3b4c5d6-e7f8-9012-abcd-123456789012",
+            "source": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+            "description": "NIST SP 800-53 Rev 5 implementations for HashiCorp Vault.",
+            "implemented-requirements": [
+              {
+                "uuid": "b4c5d6e7-f8a9-0123-bcde-234567890123",
+                "control-id": "ia-5",
+                "description": "Vault provides dynamic secret generation, certificate issuance, and credential rotation.",
+                "statements": [
+                  {
+                    "statement-id": "ia-5_smt.a",
+                    "uuid": "c5d6e7f8-a9b0-1234-cdef-345678901234",
+                    "description": "Vault enforces secret TTLs, automatic rotation, and audit logging of all access."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

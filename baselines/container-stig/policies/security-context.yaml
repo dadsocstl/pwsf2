@@ -1,1 +1,66 @@
-Container STIG policies
+apiVersion: v1
+kind: List
+items:
+  # Container STIG Policy: Require non-root user
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sContainerSecurity
+    metadata:
+      name: container-stig-no-root
+      annotations:
+        stig.disa.mil/finding: "V-233085"
+        stig.disa.mil/severity: "CAT I"
+        description: "Container processes must not run as UID 0 (root)."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+
+  # Container STIG Policy: Require read-only root filesystem
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sContainerSecurity
+    metadata:
+      name: container-stig-readonly-rootfs
+      annotations:
+        stig.disa.mil/finding: "V-233086"
+        stig.disa.mil/severity: "CAT II"
+        description: "Container root filesystem must be read-only."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        readOnlyRootFilesystem: true
+
+  # Container STIG Policy: Drop all capabilities
+  - apiVersion: constraints.gatekeeper.sh/v1beta1
+    kind: K8sContainerSecurity
+    metadata:
+      name: container-stig-drop-all-caps
+      annotations:
+        stig.disa.mil/finding: "V-233087"
+        stig.disa.mil/severity: "CAT I"
+        description: "All Linux capabilities must be dropped from containers."
+    spec:
+      enforcementAction: deny
+      match:
+        kinds:
+          - apiGroups: [""]
+            kinds: ["Pod"]
+        excludedNamespaces:
+          - kube-system
+      parameters:
+        requiredDropCapabilities:
+          - ALL
+        forbiddenSysctls:
+          - "*"
