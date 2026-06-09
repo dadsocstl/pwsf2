@@ -1,1 +1,1 @@
-Dynamic STIG Overlay Generator - full working version
+Full correct multi-line Python script for Dynamic STIG Overlay Generator (Windows 11 M-L-L)
