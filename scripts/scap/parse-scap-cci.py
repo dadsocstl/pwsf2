@@ -5,6 +5,8 @@ Parses a SCAP ARF (Assessment Results Format) XML file and extracts
 CCI (Control Correlation Identifier) findings into a structured JSON
 or CSV report.
 
+Requires Python 3.9+.
+
 Usage:
     python3 parse-scap-cci.py --input results/arf-results.xml --output report.json
     python3 parse-scap-cci.py --input results/arf-results.xml --format csv --output report.csv
@@ -14,6 +16,10 @@ import argparse
 import csv
 import json
 import sys
+
+if sys.version_info < (3, 9):
+    sys.exit(f"ERROR: Python 3.9 or later is required. Running {sys.version}")
+
 from pathlib import Path
 import xml.etree.ElementTree as ET
 

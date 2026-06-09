@@ -31,6 +31,15 @@ spec:
           attestors:
             - count: 1
               entries:
+                  # Option 1 (preferred for production): Reference a Kubernetes Secret
+                  # containing the Cosign public key so key rotation is handled through
+                  # secret management rather than manifest changes:
+                  #
+                  # - secret:
+                  #     name: cosign-public-key
+                  #     namespace: kyverno
+                  #
+                  # Option 2 (inline key — suitable for bootstrapping only):
                 - keys:
                     publicKeys: |-
                       -----BEGIN PUBLIC KEY-----

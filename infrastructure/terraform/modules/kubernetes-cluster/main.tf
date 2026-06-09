@@ -17,6 +17,10 @@ resource "aws_eks_cluster" "this" {
   vpc_config {
     subnet_ids              = var.subnet_ids
     endpoint_private_access = true
+    # endpoint_public_access is disabled per STIG requirement V-242390.
+    # All cluster API access must originate from within the VPC via VPN,
+    # bastion host, or VPC peering. CI/CD runners must be deployed inside
+    # the VPC or connected via Transit Gateway / Direct Connect.
     endpoint_public_access  = false
   }
 

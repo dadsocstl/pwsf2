@@ -60,6 +60,9 @@ eck-kibana:
       name: cyberforge-es
     config:
       xpack.security.enabled: true
+      # KIBANA_ENCRYPTION_KEY must be set as a Kubernetes Secret and injected
+      # as an environment variable by the ECK operator or Vault agent sidecar.
+      # See: https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.html
       xpack.encryptedSavedObjects.encryptionKey: "${KIBANA_ENCRYPTION_KEY}"
     podTemplate:
       spec:

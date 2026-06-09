@@ -147,10 +147,16 @@
 
     - name: "V-257794 | CAT II | Ensure FIPS mode is enabled"
       command: fips-mode-setup --enable
-      args:
-        creates: /proc/sys/crypto/fips_enabled
       register: fips_result
+      changed_when: fips_result.rc == 0
       failed_when: false
+
+    - name: "V-257794 | Verify FIPS mode is active"
+      shell: cat /proc/sys/crypto/fips_enabled
+      register: fips_status
+      changed_when: false
+      failed_when: fips_status.stdout | trim != "1"
+      ignore_errors: true
 
   # ------------------------------------------------------------------ #
   # Handlers

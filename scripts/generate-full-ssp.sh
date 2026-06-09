@@ -66,7 +66,7 @@ ssp_bundle = {
             "title": "CyberForge Platform SSP",
             "version": "1.0",
             "oscal-version": "1.0.4",
-            "last-modified": os.popen("date -u +%Y-%m-%dT%H:%M:%SZ").read().strip()
+            "last-modified": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         },
         "import-profile": {"href": profile.get("profile", {}).get("href", "")},
         "system-characteristics": component_def.get("component-definition", {}).get("metadata", {}),

@@ -9,7 +9,7 @@ stages:
 
 variables:
   COSIGN_KEY_PATH: /vault/secrets/cosign.key
-  COSIGN_PASSWORD: ""  # Set via Vault secret injection
+  # COSIGN_PASSWORD must be injected via Vault agent or CI secret — do not set a default here
   SIGSTORE_NO_TLOG_UPLOAD: "true"   # air-gapped: skip rekor transparency log
 
 # ──────────────────────────────────────────────
