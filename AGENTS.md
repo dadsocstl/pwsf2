@@ -1,1 +1,1 @@
-Agent persona and rules for autonomous work on this project
+Full agent instructions and rules

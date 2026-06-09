@@ -1,1 +1,1 @@
-Current remaining tasks and handoff list
+Full current TODO list with all completed items

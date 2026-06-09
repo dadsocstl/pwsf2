@@ -1,1 +1,1 @@
-Living project heartbeat and activity log
+Full living heartbeat log
