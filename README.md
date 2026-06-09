@@ -1,15 +1,12 @@
 # CyberForge Platform (PWSF2)
 
-Production-ready DevSecOps Platform as a Service.
+Production-ready DevSecOps PaaS
 
-## Key Features
-- Dynamic STIG Overlay Generator (Windows 11 M-L-L first)
-- OSCAL automation with NIST + ComplianceAsCode
-- Software Request Vetting (OSS/GOTS/COTS) with HITL
-- CCI parsing from SCAP results
-- Full GitLab CI/CD ready (also works on GitHub Actions)
+## Features
+- Dynamic STIG Overlay Generator
+- OSCAL + ComplianceAsCode integration
+- Software Request Vetting with HITL
+- CCI parsing from SCAP
+- Full observability (ELK + Cilium + Redis)
 
-## Quick Start
-See TODO.md and scripts/ for usage.
-
-Repository created via Grok connected tools.
+See TODO.md for current status.

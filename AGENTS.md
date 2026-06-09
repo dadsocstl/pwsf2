@@ -1,1 +1,1 @@
-AGENTS.md content placeholder - full file will be pushed in next batch
+Agent persona and rules for autonomous work on this project
