@@ -1,1 +1,1 @@
-Required skills for working on this project
+Full SKILLS.md for the project

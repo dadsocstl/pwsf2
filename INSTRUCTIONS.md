@@ -1,1 +1,1 @@
-Instructions for Code as Compliance and DevSecOps
+Full INSTRUCTIONS.md for Code as Compliance
