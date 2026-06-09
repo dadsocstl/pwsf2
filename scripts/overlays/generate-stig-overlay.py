@@ -1,0 +1,1 @@
+Full content of generate-stig-overlay.py
