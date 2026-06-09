@@ -1,1 +1,1 @@
-Full content of parse-scap-cci.py
+CCI parser from SCAP ARF results - full version

@@ -1,1 +1,1 @@
-Full content of generate-stig-overlay.py
+Dynamic STIG Overlay Generator - full working version
